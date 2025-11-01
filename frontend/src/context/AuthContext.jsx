@@ -65,7 +65,21 @@ export function AuthProvider({ children }) {
     const interceptor = API.interceptors.response.use(
       res => res,
       err => {
+        // Debug: log failing request details to help diagnose unexpected logouts
+        try {
+          const cfg = err && err.config ? err.config : {};
+          const url = cfg.url || '(no url)';
+          const method = cfg.method || '(no method)';
+          const status = err && err.response ? err.response.status : '(no status)';
+          const data = err && err.response ? err.response.data : null;
+          console.warn('[API interceptor] request failed', { method, url, status, data });
+        } catch (logErr) {
+          console.warn('[API interceptor] failed to log error details', logErr);
+        }
+
         if (err && err.response && err.response.status === 401) {
+          // preserve original behaviour (auto-logout) but log to console first
+          console.warn('[Auth] auto-logout triggered by 401 for', err.config && err.config.url);
           logout();
         }
         return Promise.reject(err);
